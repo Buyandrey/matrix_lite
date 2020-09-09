@@ -7,6 +7,7 @@ using strmatr = double[4][4];
 
 class matrix {
 public:
+	
 	matrix() {}
 	matrix(const strmatr& str,const size_t& m, const size_t& n):_m(m),_n(n){
 		set_M(str);
@@ -147,22 +148,165 @@ public:
 			}
 		}
 		matrix res(r, 4, 4);
-		//res.printMatrix();
+		res.printMatrix();
 		return res;
 	}
+	matrix PreMinor(const size_t& row, const size_t& col) const
+	{
+		//возвращает матрицу минора(?)
+		size_t size_minor = (this->get_m() - 1);
+		strmatr vv;
+
+		size_t i, j, in, jn;
+
+		for (i = 0, in = 0; i < size_minor + 1; i++) {
+			if (i != row) {
+				for (j = 0, jn = 0; j < size_minor + 1; j++) {
+					if (j != col) {
+						vv[in][jn++] = getElement(i, j);
+					}
+				}
+				in++;
+			}
+		}
+		matrix res(vv, size_minor, size_minor);
+		return res;
+	}
+	matrix inverted(const double& D) const {
+		
+		if ((this->get_m() - 1) <= 0) {
+			std::cerr<<"throw invalid_argument(Matrix less or equal then 0)";
+		}
+		strmatr vv;
+		size_t i, j;
+
+		for (j = 0; j < 4; j++) {
+			for (i = 0; i < 4; i++) {
+				vv[j][i] = (1 / D)*(this->PreMinor(i, j).determinant((this->get_m() - 1)) * ((i + j) % 2 ? -1 : 1));//убрал сюда умножение на 1/d
+			}
+		}
+		matrix newMatrix(vv,4,4);
+
+		return  newMatrix;
+	}
+	
+	
+	friend std::ostream& operator << (std::ostream& os, const matrix& m);
+
 private:
 	size_t _m, _n;//lines, columns
-	strmatr _M = { 
+	strmatr _M /*= { 
 		{NAN,NAN,NAN,NAN},
 		{NAN,NAN,NAN,NAN},
 		{NAN,NAN,NAN,NAN},
 		{NAN,NAN,NAN,NAN}
-	};
-};
+	}*/;
+}; 
 
+std::ostream& operator << (std::ostream& os, const strmatr& s) {
+	for (size_t i = 0; i < 4; i++) {
+		for (size_t j = 0; j < 4; j++) {
+			if ( !isnan(s[i][j]) )
+				std::cout << std::setw(4) << std::setfill(' ') << s[i][j] << ' ';
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+	return  os;
+}
+std::ostream& operator << (std::ostream& os, const matrix& m) {
+	for (size_t i = 0; i < m.get_m(); i++) {
+		for (size_t j = 0; j < m.get_n(); j++) {
+			if (!isnan(m._M[i][j]))
+				std::cout << std::setw(4) << std::setfill(' ') << m._M[i][j] << ' ';
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+	return  os;
+}
+matrix operator*(const double& value, const matrix& M) {
 
+	strmatr vv;
 
+	for (size_t i = 0; i < M.get_m(); i++)
+		for (size_t j = 0; j < M.get_n(); j++)
+			vv[i][j] = M.getElement(i,j) * value;
+
+	matrix r(vv, M.get_m(), M.get_n());
+
+	return(r);
+}
+matrix operator*(const matrix& M, const double& value) {
+
+	strmatr vv;
+
+	for (size_t i = 0; i < M.get_m(); i++)
+		for (size_t j = 0; j < M.get_n(); j++)
+			vv[i][j] = M.getElement(i, j) * value;
+
+	matrix r(vv, M.get_m(), M.get_n());
+
+	return(r);
+}
+matrix operator*(const matrix& lhs, const matrix& rhs) {
+	//4114
+
+	if (lhs.get_n() == rhs.get_m()) {
+		strmatr vv;
+
+		for (size_t i = 0; i < lhs.get_m(); i++)
+			for (size_t j = 0; j < rhs.get_n(); j++)
+			{
+				vv[i][j] = 0;
+				for (size_t k = 0; k < lhs.get_n(); k++)
+					vv[i][j] += lhs.getElement(i, k) * rhs.getElement(k, j);
+			}
+		matrix res(vv, lhs.get_m(), rhs.get_n());
+		return res;
+	}
+}
+matrix operator+(const matrix& lhs, const matrix& rhs) {
+
+	if (lhs.get_m() == rhs.get_m() && lhs.get_n() == rhs.get_n()) {
+		strmatr vv;
+		for (size_t i = 0; i < lhs.get_m(); i++)
+			for (size_t j = 0; j < lhs.get_n(); j++)
+				vv[i][j]= (lhs.getElement(i, j) + rhs.getElement(i, j));
+
+		matrix res(vv, lhs.get_m(), lhs.get_n());
+		return(res);
+	}
+	//else {
+	//	throw invalid_argument("Matrix's size are not equal !!!");
+	//}
+}
+matrix operator-(const matrix& lhs, const matrix& rhs) {
+	if (lhs.get_m() == rhs.get_m() && lhs.get_n() == rhs.get_n()) {
+		strmatr vv;
+		for (size_t i = 0; i < lhs.get_m(); i++)
+			for (size_t j = 0; j < lhs.get_n(); j++)
+				vv[i][j] = (lhs.getElement(i, j) - rhs.getElement(i, j));
+
+		matrix res(vv, lhs.get_m(), lhs.get_n());
+		return(res);
+	}
+	/*else {
+		throw invalid_argument("Matrix's size are not equal !!!");
+	}*/
+}
+matrix operator/(const matrix& lhs, const matrix& rhs) {
+	return(lhs * rhs.inverted(rhs.determinant(lhs.get_m())));
+}
 int main() {
+
+	strmatr asdasd = {
+		{1.0, 2.0, 3.0},
+		{5.0, 2.0, 3.0},
+		{6.0, 2.0, 0.0}
+	};
+
+	matrix test(asdasd, 3, 3);
 
 	matrix a4x4(
 	{
@@ -192,15 +336,18 @@ int main() {
 			{1.0, 2.0},
 			{5.0, 2.0}
 		},
-		4, 4);
+		2, 2);
 
 	matrix a1x1({
 		{7} 
 		},1, 1);
 	//std::cout << a4x4.determinant(4);
 
-	a4x4.Transponierte();
-
+	//a4x4.transponierte();
+	std::cout << a4x1*a1x1;
+	strmatr hh[194][1];
+	//std::cout << a1x4.get_m() << a1x4.get_n();
+	//std::cout << sizeof(hh) / sizeof(hh[0]);
 	return 0;
 }
 
